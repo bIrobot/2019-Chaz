@@ -1,0 +1,19 @@
+{
+  "pyfrc": {
+
+  	"robot": {
+  	  "w": 2.25,
+  	  "h": 2.75,
+
+      "start_positions": [
+            {"x": 2, "y": 10.25, "angle": 0, "name": "left"},
+            {"x": 6, "y": 13.9, "angle": 0, "name": "middle"},
+            {"x": 2, "y": 17.55, "angle": 0, "name": "right"}
+        ]
+  	},
+
+  	"field": {
+      "season": 2019
+    }
+  }
+}
