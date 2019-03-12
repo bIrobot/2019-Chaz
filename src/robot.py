@@ -1,17 +1,18 @@
 # !/usr/bin/env python3
 
-import magicbot
 import wpilib
 import wpilib.drive
+from wpilib.shuffleboard import Shuffleboard
+from networktables import NetworkTables
+import magicbot
 import ctre
 import navx
-from networktables import NetworkTables
-from wpilib.shuffleboard import Shuffleboard
 
-import components.drivetrain
 import components.arm
 import components.arm_controller
 import components.cone
+import components.drivetrain
+
 
 class MyRobot(magicbot.MagicRobot):
     drivetrain: components.drivetrain.Drivetrain
@@ -117,11 +118,8 @@ class MyRobot(magicbot.MagicRobot):
         self.sd.putBoolean('arm/arm_low_direction', self.arm_low_encoder.getDirection())
 
         wpilib.SmartDashboard.updateValues()
-        self.watchdog.addEpoch("SmartDashboard")
         wpilib.LiveWindow.updateValues()
-        self.watchdog.addEpoch("LiveWindow")
         wpilib.shuffleboard.Shuffleboard.update()
-        self.watchdog.addEpoch("Shuffleboard")
 
     def disabledPeriodic(self):
         """This function is called periodically during disabled mode."""
@@ -151,6 +149,7 @@ class MyRobot(magicbot.MagicRobot):
         """Clamps input to maximum and minimum values."""
 
         return max(low, min(value, high))
+
 
 if __name__ == "__main__":
     wpilib.run(MyRobot)

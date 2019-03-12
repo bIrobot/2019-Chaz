@@ -1,7 +1,9 @@
 import wpilib
-import ctre
-import numpy as np
 from magicbot import tunable
+import ctre
+
+import numpy as np
+
 
 ENCODER_TICKS_PER_DEGREE = 2048 / 360
 LOW_ARM_WEIGHT = 20
@@ -9,6 +11,7 @@ MIDDLE_ARM_WEIGHT = 3
 CONE_WEIGHT = 2.5
 LOW_MOMENT_ARM = 11
 MIDDLE_MOMENT_ARM = 20
+
 
 class Arm:
     '''

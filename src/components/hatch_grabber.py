@@ -1,12 +1,17 @@
 import wpilib
-import ctre
 from magicbot import StateMachine, state, timed_state
+import ctre
+
+import components.arm_controller
 import components.drivetrain
+
 
 class HatchGrabber:
     '''
         Hatch Grabber
     '''
+    arm_controller: components.arm_controller.ArmController
+    drivetrain: components.drivetrain.Drivetrain
 
     hatch_grabber: ctre.WPI_VictorSPX
     hatch_grabber_switch: wpilib.DigitalInput
@@ -15,8 +20,11 @@ class HatchGrabber:
         self.motor_positive = 0
         self.motor_negative = 0
 
+        self.drive_y = 0
+
         self.get_grabber_ready = False
         self.grab_the_hatch = False
+        self.move_arm = False
 
     def setup(self):
         self.get_ready: GetReady
@@ -48,6 +56,13 @@ class HatchGrabber:
             self.hatch_grabber.set(self.motor_positive - self.motor_negative)
         else:
             self.hatch_grabber.set(self.motor_positive)
+        
+        if self.drive_y is not 0:
+            self.drivetrain.move(self.drive_y, 0, 0)
+        
+        if self.move_arm is True:
+            self.arm_controller.set_arm_position(12, 0)
+            self.move_arm = False
 
 
 class GetReady(StateMachine):
@@ -55,7 +70,13 @@ class GetReady(StateMachine):
     def run(self):
         self.engage()
     
-    @timed_state(first=True, duration=2)
+    @state(first=True)
+    def set_arm(self):
+        HatchGrabber.move_arm = True
+
+        self.next_state('lower')
+    
+    @timed_state(duration=2)
     def lower(self):
         HatchGrabber.motor_positive = 0.25
         HatchGrabber.motor_negative = 0
@@ -70,8 +91,6 @@ class GetReady(StateMachine):
 
 class GrabHatch(StateMachine):
 
-    drivetrain: components.drivetrain.Drivetrain
-    
     def run(self):
         self.engage()
     
@@ -84,7 +103,7 @@ class GrabHatch(StateMachine):
     
     @timed_state(duration=1)
     def reverse(self):
-        self.drivetrain.move(-0.1, 0, 0)
+        HatchGrabber.drive_y = -0.1
 
         self.next_state('slam')
     

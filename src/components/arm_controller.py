@@ -1,10 +1,13 @@
 import wpilib
-import numpy as np
 from magicbot import tunable
+
+import numpy as np
 
 import components.arm
 
+
 LENGTH_BETWEEN_JOINTS = 28
+
 
 class ArmController:
     '''

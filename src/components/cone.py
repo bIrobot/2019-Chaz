@@ -1,6 +1,7 @@
 import wpilib
 import ctre
 
+
 class Cone:
     '''
         Cone Controller
