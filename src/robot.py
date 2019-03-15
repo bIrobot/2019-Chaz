@@ -30,7 +30,6 @@ class MyRobot(magicbot.MagicRobot):
         self.controller = wpilib.XboxController(0)
         self.gamepad = fightstick.FightStick(1)
 
-
         wpilib.CameraServer.launch('vision.py:main')
 
         # NetworkTables.initialize()
@@ -122,6 +121,9 @@ class MyRobot(magicbot.MagicRobot):
         elif self.gamepad.getYButton():
             self.arm_x = 0
             self.arm_y = 55.875
+        elif self.gamepad.getL2Button():
+            self.arm_x = 12
+            self.arm_y = 0
 
         self.arm_controller.set_arm_position(self.arm_x, self.arm_y)
 

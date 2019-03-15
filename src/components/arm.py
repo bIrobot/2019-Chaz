@@ -141,9 +141,9 @@ class Arm:
         self.arm_middle_switch_last_value = self.arm_middle_switch.get()
         self.arm_high_switch_last_value = self.arm_high_switch.get()
 
-        self.low_joint_angle = self.arm_low_encoder.get() * (360 / 2048) * -1 + 85
+        self.low_joint_angle = self.arm_low_encoder.get() * (360 / 2048) * -1 + 61.5
         self.middle_joint_angle = self.arm_middle_encoder.get() * (360 / 2048) * -1 - 153
-        self.high_joint_angle = self.arm_high_encoder.get() * (360 / 2048) * -1 + (153 - 85)
+        self.high_joint_angle = self.arm_high_encoder.get() * (360 / 2048) * -1 + (153 - 61.5)
         low_arm_angle = self.low_joint_angle
         self.middle_arm_angle = low_arm_angle + self.middle_joint_angle
         cone_angle = self.middle_arm_angle + self.high_joint_angle
