@@ -1,0 +1,47 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "RobotPy Deploy",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/robot.py",
+            "args": ["deploy"],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "RobotPy Deploy (no tests)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/robot.py",
+            "args": ["deploy", "--skip-tests"],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "RobotPy Sim",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/robot.py",
+            "args": ["sim"],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "RobotPy Tests",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/robot.py",
+            "args": ["test"],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Python: Current File (Integrated Terminal)",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal"
+        },
+    ]
+}
