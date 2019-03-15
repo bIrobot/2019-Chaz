@@ -8,6 +8,7 @@ import magicbot
 import ctre
 import navx
 
+import fightstick
 import components.arm
 import components.arm_controller
 import components.cone
@@ -25,8 +26,10 @@ class MyRobot(magicbot.MagicRobot):
     def createObjects(self):
         """Initialize everything."""
 
-        # Initialize joystick
-        self.stick = wpilib.XboxController(0)
+        # Initialize joysticks
+        self.controller = wpilib.XboxController(0)
+        self.gamepad = fightstick.FightStick(1)
+
 
         wpilib.CameraServer.launch('vision.py:main')
 
@@ -77,35 +80,54 @@ class MyRobot(magicbot.MagicRobot):
     def teleopInit(self):
         """This function is called at the beginning of teleoperated mode."""
 
-        self.arm.enable()
+        # self.arm.enable()
         self.arm.execute()
     
     def teleopPeriodic(self):
         """This function is called periodically during teleoperated mode."""
 
-        leftXAxis = self.normalize(self.stick.getX(0), 0.15)
-        leftYAxis = self.normalize(self.stick.getY(0), 0.15)
-        rotation = self.normalize(self.stick.getX(1), 0.15)
+        leftXAxis = self.normalize(self.controller.getX(0), 0.15)
+        leftYAxis = self.normalize(self.controller.getY(0), 0.15)
+        rotation = self.normalize(self.controller.getX(1), 0.15)
 
         self.drivetrain.move(leftYAxis, leftXAxis, rotation)
 
-        if self.stick.getYButton():
+        if self.controller.getYButton():
             self.cone.release()
 
-        # self.arm_x = self.clamp(self.arm_x + self.normalize(self.stick.getX(0), 0.2), 12, 50)
-        # self.arm_y = self.clamp(self.arm_y + self.normalize(self.stick.getY(1) * -1, 0.2), -5, 56)
+        # self.arm_x = self.clamp(self.arm_x + self.normalize(self.controller.getX(0), 0.2), -10, 40)
+        # self.arm_y = self.clamp(self.arm_y + self.normalize(self.controller.getY(1) * -1, 0.2), -5, 56)
 
         # self.arm_controller.set_arm_position(self.arm_x, self.arm_y)
 
     def testInit(self):
         """This function is called at the beginning of test mode."""
 
-        pass
+        self.arm.enable()
+        # self.arm.disable()
+        self.arm.execute()
 
     def testPeriodic(self):
         """This function is called periodically during test mode."""
 
-        pass
+        if self.controller.getYButton():
+            self.cone.release()
+
+        if self.gamepad.getL1Button():
+            self.arm_x = 30
+            self.arm_y = -0.125
+        elif self.gamepad.getXButton():
+            self.arm_x = 30
+            self.arm_y = 27.875
+        elif self.gamepad.getYButton():
+            self.arm_x = 0
+            self.arm_y = 55.875
+
+        self.arm_controller.set_arm_position(self.arm_x, self.arm_y)
+
+        self.arm_controller.execute()
+        self.arm.execute()
+        self.cone.execute()
     
     def robotPeriodic(self):
         """This function is called periodically at the end of every robot mode."""

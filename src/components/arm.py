@@ -8,7 +8,7 @@ import numpy as np
 ENCODER_TICKS_PER_DEGREE = 2048 / 360
 LOW_ARM_WEIGHT = 20
 MIDDLE_ARM_WEIGHT = 3
-CONE_WEIGHT = 2.5
+CONE_WEIGHT = 2.5 + 2.2
 LOW_MOMENT_ARM = 11
 MIDDLE_MOMENT_ARM = 20
 
@@ -32,8 +32,8 @@ class Arm:
     low_i = tunable(default=0.00015)
     low_d = tunable(default=0.0015)
 
-    middle_p = tunable(default=0.00075)
-    middle_i = tunable(default=0.0001)
+    middle_p = tunable(default=0.0001)
+    middle_i = tunable(default=0.00005)
     middle_d = tunable(default=-0.003)
 
     high_p = tunable(default=0.002)
@@ -45,6 +45,9 @@ class Arm:
     low_angle = tunable(default=0)
     middle_angle = tunable(default=0)
     high_angle = tunable(default=0)
+    low_range = tunable(default=0)
+    middle_range = tunable(default=0)
+    high_range = tunable(default=0)
 
 
     def __init__(self):
@@ -68,8 +71,15 @@ class Arm:
 
         self.low_pid.setInputRange(-95 * ENCODER_TICKS_PER_DEGREE, 85 * ENCODER_TICKS_PER_DEGREE)
         self.middle_pid.setInputRange(-290 * ENCODER_TICKS_PER_DEGREE, 0 * ENCODER_TICKS_PER_DEGREE)
-        self.high_pid.setInputRange(-10 * ENCODER_TICKS_PER_DEGREE, 170 * ENCODER_TICKS_PER_DEGREE)
-        
+        self.high_pid.setInputRange(0 * ENCODER_TICKS_PER_DEGREE, 120 * ENCODER_TICKS_PER_DEGREE)
+
+        # self.low_pid.setDeadzone(15, 50)
+        self.low_pid.setDeadzone(0, 0)
+        # self.middle_pid.setDeadzone(20, 50)
+        self.middle_pid.setDeadzone(0, 0)
+        self.high_pid.setDeadzone(5, 25)
+        # self.high_pid.setDeadzone(0, 0)
+
         self.low_pid.enable()
         self.middle_pid.enable()
         self.high_pid.enable()
@@ -102,7 +112,10 @@ class Arm:
         # self.high_pid.setSetpoint(high * ENCODER_TICKS_PER_DEGREE)
         self.low_pid.setSetpoint((low * -1 + 85) * ENCODER_TICKS_PER_DEGREE)
         self.middle_pid.setSetpoint((middle * -1 - 153) * ENCODER_TICKS_PER_DEGREE)
-        self.high_pid.setSetpoint(high * ENCODER_TICKS_PER_DEGREE)
+        if (self.middle_arm_angle < 90):
+            self.high_pid.setSetpoint((self.middle_arm_angle + 80) * ENCODER_TICKS_PER_DEGREE)
+        else:
+            self.high_pid.setSetpoint((self.middle_arm_angle - 100) * ENCODER_TICKS_PER_DEGREE)
 
     def disable(self):
         self.low_pid.disable()
@@ -132,16 +145,23 @@ class Arm:
         self.middle_joint_angle = self.arm_middle_encoder.get() * (360 / 2048) * -1 - 153
         self.high_joint_angle = self.arm_high_encoder.get() * (360 / 2048) * -1 + (153 - 85)
         low_arm_angle = self.low_joint_angle
-        middle_arm_angle = low_arm_angle + self.middle_joint_angle
-        cone_angle = middle_arm_angle + self.high_joint_angle
+        self.middle_arm_angle = low_arm_angle + self.middle_joint_angle
+        cone_angle = self.middle_arm_angle + self.high_joint_angle
         self.low_pid.setF(self.low_feedforward(self.low_joint_angle, self.middle_joint_angle, LOW_ARM_WEIGHT, MIDDLE_ARM_WEIGHT + CONE_WEIGHT, LOW_MOMENT_ARM, MIDDLE_MOMENT_ARM))
-        self.middle_pid.setF(((MIDDLE_ARM_WEIGHT + CONE_WEIGHT) * MIDDLE_MOMENT_ARM * np.cos(middle_arm_angle * np.pi / 180)) / (12.48 * 100) * -1)
+        self.middle_pid.setF(((MIDDLE_ARM_WEIGHT + CONE_WEIGHT - 2.2) * MIDDLE_MOMENT_ARM * np.cos(self.middle_arm_angle * np.pi / 180)) / (12.48 * 100) * -1)
 
         self.low_f = self.low_pid.getF()
         self.middle_f = self.middle_pid.getF()
         self.low_angle = low_arm_angle
         self.middle_angle = self.middle_joint_angle
         self.high_angle = cone_angle
+
+        self.low_range = 1 / max(1, min(abs(self.arm_low_encoder.getRate()) / 150, 8))
+        self.low_pid.setOutputRange(-1 * self.low_range, 1 * self.low_range)
+        self.middle_range = 1 / max(1, min(abs(self.arm_low_encoder.getRate()) / 20000, 8))
+        self.middle_pid.setOutputRange(-1 * self.middle_range, 1 * self.middle_range)
+        self.high_range = 1 / max(1, min(abs(self.arm_low_encoder.getRate()) / 10, 10))
+        self.high_pid.setOutputRange(-0.5 * self.high_range, 0.5 * self.high_range)
 
     def low_feedforward(self, low_angle, middle_angle, low_weight, middle_weight, low_length, middle_length):
         low_angle = low_angle * np.pi / 180
@@ -159,5 +179,82 @@ class Arm:
 
 class PIDController(wpilib.PIDController):
 
+    deadzone = 0
+
+    def _calculate(self) -> None:
+        """Read the input, calculate the output accordingly, and write to the
+        output.  This should only be called by the PIDTask and is created
+        during initialization."""
+        if self.origSource is None or self.pidOutput is None:
+            return
+
+        with self.mutex:
+            enabled = self.enabled  # take snapshot of these values...
+
+        if enabled:
+            feedForward = self.calculateFeedForward()
+
+            with self.mutex:
+                input = self.pidInput.pidGet()
+                pidSourceType = self.pidInput.getPIDSourceType()
+                P = self.P
+                I = self.I
+                D = self.D
+                minimumOutput = self.minimumOutput
+                maximumOutput = self.maximumOutput
+                prevError = self.prevError
+                error = self.getContinuousError(self.setpoint - input)
+                totalError = self.totalError
+
+            # start
+
+            if pidSourceType == self.PIDSourceType.kRate:
+                if P != 0:
+                    totalError = self.clamp(
+                        totalError + error, minimumOutput / P, maximumOutput / P
+                    )
+
+                result = P * totalError + D * error + feedForward
+
+            else:
+                if I != 0:
+                    totalError = self.clamp(
+                        totalError + error, minimumOutput / I, maximumOutput / I
+                    )
+
+                result = (
+                    P * error + I * totalError + D * (error - prevError) + feedForward
+                )
+
+            result = self.clamp(result, minimumOutput, maximumOutput)
+
+            with self.pidWriteMutex:
+                with self.mutex:
+                    enabled = self.enabled
+                if enabled:
+                    self.calculateOutput(result)
+
+            with self.mutex:
+                self.prevError = error
+                self.error = error
+                self.totalError = totalError
+                self.result = result
+
     def calculateFeedForward(self) -> float:
         return self.F
+    
+    def setDeadzone(self, low, high):
+        self.low_deadzone = low
+        self.high_deadzone = high
+
+    def calculateOutput(self, input):
+        if self.F < 0:
+            if (self.getSetpoint() - self.pidInput.pidGet()) > self.low_deadzone and (self.getSetpoint() - self.pidInput.pidGet()) < self.high_deadzone:
+                self.pidOutput(0)
+            else:
+                self.pidOutput(input)
+        else:
+            if (self.getSetpoint() - self.pidInput.pidGet()) < self.low_deadzone * -1 and (self.getSetpoint() - self.pidInput.pidGet()) > self.high_deadzone * -1:
+                self.pidOutput(0)
+            else:
+                self.pidOutput(input)
