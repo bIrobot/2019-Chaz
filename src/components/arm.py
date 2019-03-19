@@ -32,9 +32,9 @@ class Arm:
     low_i = tunable(default=0.00015)
     low_d = tunable(default=0.0015)
 
-    middle_p = tunable(default=0.0001)
-    middle_i = tunable(default=0.00005)
-    middle_d = tunable(default=-0.003)
+    middle_p = tunable(default=0.0015)
+    middle_i = tunable(default=0.0001)
+    middle_d = tunable(default=0.0002)#-0.003
 
     high_p = tunable(default=0.002)
     high_i = tunable(default=0.0003)
@@ -60,18 +60,20 @@ class Arm:
         self.low_torque = 0
         self.middle_torque = 0
 
+        self.high_offset = 0
+
     def setup(self):
         self.low_pid = PIDController(self.low_p, self.low_i, self.low_d, 0, self.arm_low_encoder, self.arm_low)
         self.middle_pid = PIDController(self.middle_p, self.middle_i, self.middle_d, 0, self.arm_middle_encoder, self.arm_middle)
         self.high_pid = PIDController(self.high_p, self.high_i, self.high_d, 0, self.arm_high_encoder, self.arm_high)
         
         self.low_pid.setOutputRange(-1, 1)
-        self.middle_pid.setOutputRange(-1, 1)
+        self.middle_pid.setOutputRange(-0.5, 0.5)
         self.high_pid.setOutputRange(-0.5, 0.5)
 
         self.low_pid.setInputRange(-95 * ENCODER_TICKS_PER_DEGREE, 85 * ENCODER_TICKS_PER_DEGREE)
         self.middle_pid.setInputRange(-290 * ENCODER_TICKS_PER_DEGREE, 0 * ENCODER_TICKS_PER_DEGREE)
-        self.high_pid.setInputRange(0 * ENCODER_TICKS_PER_DEGREE, 120 * ENCODER_TICKS_PER_DEGREE)
+        self.high_pid.setInputRange(-15 * ENCODER_TICKS_PER_DEGREE, 120 * ENCODER_TICKS_PER_DEGREE)
 
         # self.low_pid.setDeadzone(15, 50)
         self.low_pid.setDeadzone(0, 0)
@@ -105,17 +107,20 @@ class Arm:
             .add(self.high_pid, title="High PID")
             .withWidget(wpilib.shuffleboard.BuiltInWidgets.kPIDController)
         )
+    
+    def set_offset(self, offset):
+        self.high_offset = offset
 
     def set_arm_setpoint(self, low, middle, high):
         # self.low_pid.setSetpoint(low * ENCODER_TICKS_PER_DEGREE)
         # self.middle_pid.setSetpoint(middle * ENCODER_TICKS_PER_DEGREE)
         # self.high_pid.setSetpoint(high * ENCODER_TICKS_PER_DEGREE)
-        self.low_pid.setSetpoint((low * -1 + 85) * ENCODER_TICKS_PER_DEGREE)
+        self.low_pid.setSetpoint((low * -1 + 61.5) * ENCODER_TICKS_PER_DEGREE)
         self.middle_pid.setSetpoint((middle * -1 - 153) * ENCODER_TICKS_PER_DEGREE)
         if (self.middle_arm_angle < 90):
-            self.high_pid.setSetpoint((self.middle_arm_angle + 80) * ENCODER_TICKS_PER_DEGREE)
+            self.high_pid.setSetpoint(((self.middle_arm_angle + 80) + self.high_offset) * ENCODER_TICKS_PER_DEGREE)
         else:
-            self.high_pid.setSetpoint((self.middle_arm_angle - 100) * ENCODER_TICKS_PER_DEGREE)
+            self.high_pid.setSetpoint(((self.middle_arm_angle - 100) + self.high_offset) * ENCODER_TICKS_PER_DEGREE)
 
     def disable(self):
         self.low_pid.disable()
@@ -156,9 +161,11 @@ class Arm:
         self.middle_angle = self.middle_joint_angle
         self.high_angle = cone_angle
 
-        self.low_range = 1 / max(1, min(abs(self.arm_low_encoder.getRate()) / 150, 8))
+        # self.low_range = 1 / max(1, min(abs(self.arm_low_encoder.getRate()) / 150, 8))
+        self.low_range = 1
         self.low_pid.setOutputRange(-1 * self.low_range, 1 * self.low_range)
-        self.middle_range = 1 / max(1, min(abs(self.arm_low_encoder.getRate()) / 20000, 8))
+        # self.middle_range = 1 / max(1, min(abs(self.arm_low_encoder.getRate()) / 20000, 8))
+        self.middle_range = 1
         self.middle_pid.setOutputRange(-1 * self.middle_range, 1 * self.middle_range)
         self.high_range = 1 / max(1, min(abs(self.arm_low_encoder.getRate()) / 10, 10))
         self.high_pid.setOutputRange(-0.5 * self.high_range, 0.5 * self.high_range)
