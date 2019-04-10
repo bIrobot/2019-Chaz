@@ -45,8 +45,8 @@ class Cone:
             self.cone_motor.set(0)
 
         if self.release_hatch_panel is True:
-            self.cone_motor.set(0.35)
+            self.cone_motor.set(0.45)
         
         if self.retracted is True and self.first_release is False:
             self.release_hatch_panel = False
-            self.cone_motor.set(-0.2)
+            self.cone_motor.set(-0.3)
